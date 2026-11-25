@@ -9,8 +9,9 @@ void main() {
   ) async {
     await tester.pumpWidget(const AptimoApp());
 
-    expect(find.text('Jadwal Minum Obat'), findsOneWidget);
-    expect(find.text('Belum ada jadwal obat'), findsOneWidget);
+    expect(find.text('Cek Jadwal\nMinum Obatmu!'), findsOneWidget);
+    expect(find.textContaining('Pratinjau tampilan'), findsNothing);
+    expect(find.text('Belum ada jadwal aktif'), findsOneWidget);
     expect(find.byType(NavigationDestination), findsNWidgets(2));
 
     await tester.tap(find.text('Riwayat').last);
@@ -50,7 +51,26 @@ void main() {
 
     expect(find.text('08.00'), findsWidgets);
     expect(find.text('Dalam 1 jam'), findsOneWidget);
-    expect(find.text('Semua Jadwal'), findsOneWidget);
+    expect(find.text('Jadwal Aktif'), findsOneWidget);
+    expect(find.text('1 obat'), findsOneWidget);
+    expect(find.text('Obat batuk'), findsNothing);
+    expect(find.text('Aktif'), findsOneWidget);
+    expect(find.byType(PopupMenuButton), findsNothing);
+    expect(find.text('Edit Jadwal'), findsOneWidget);
+    expect(find.text('Akhiri Jadwal'), findsOneWidget);
+  });
+
+  testWidgets('logo mengganti data contoh dan keadaan kosong', (tester) async {
+    await tester.pumpWidget(const AptimoApp(tampilkanContoh: true));
+
+    expect(find.text('Paracetamol'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('aptimoDemoToggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('Belum ada jadwal aktif'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('aptimoDemoToggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('Paracetamol'), findsWidgets);
   });
 
   test('jadwal nonaktif tidak menghasilkan pengingat mendatang', () {
@@ -61,6 +81,34 @@ void main() {
       status: StatusJadwal.nonaktif,
     );
     expect(jadwal.berikutnya(DateTime(2026, 11, 26, 7)), isNull);
+  });
+
+  testWidgets('jadwal yang diakhiri hilang dari daftar aktif', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: JadwalPage(
+          sekarang: DateTime(2026, 11, 26, 7),
+          jadwalAwal: const [
+            JadwalObat(
+              nama: 'Paracetamol',
+              jam: [TimeOfDay(hour: 8, minute: 0)],
+              hari: {1, 2, 3, 4, 5, 6, 7},
+              status: StatusJadwal.aktif,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.scrollUntilVisible(find.text('Akhiri Jadwal'), 200);
+    await tester.tap(find.text('Akhiri Jadwal'));
+    await tester.pumpAndSettle();
+    expect(find.text('Akhiri jadwal?'), findsOneWidget);
+
+    await tester.tap(find.text('Akhiri jadwal'));
+    await tester.pumpAndSettle();
+    expect(find.text('Belum ada jadwal aktif'), findsOneWidget);
+    expect(find.text('Edit Jadwal'), findsNothing);
   });
 
   test('periode yang selesai tidak menghasilkan pengingat baru', () {

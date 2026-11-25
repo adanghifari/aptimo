@@ -185,24 +185,27 @@ class _JadwalPageState extends State<JadwalPage> {
   Widget build(BuildContext context) {
     final sekarang = widget.sekarang ?? DateTime.now();
     final daftar = _lihatKosong ? <JadwalObat>[] : _jadwal;
-    final urutan = List.generate(daftar.length, (index) => index)
-      ..sort((a, b) {
-        final status = daftar[a]
-            .statusPada(sekarang)
-            .index
-            .compareTo(daftar[b].statusPada(sekarang).index);
-        if (status != 0) return status;
-        final waktuA = daftar[a].berikutnya(sekarang);
-        final waktuB = daftar[b].berikutnya(sekarang);
-        if (waktuA != null && waktuB != null) {
-          final waktu = waktuA.compareTo(waktuB);
-          if (waktu != 0) return waktu;
-        }
-        return daftar[a].nama.compareTo(daftar[b].nama);
-      });
+    final urutan =
+        [
+          for (var index = 0; index < daftar.length; index++)
+            if (daftar[index].statusPada(sekarang) == StatusJadwal.aktif) index,
+        ]..sort((a, b) {
+          final waktuA = daftar[a].berikutnya(sekarang);
+          final waktuB = daftar[b].berikutnya(sekarang);
+          if (waktuA != null && waktuB != null) {
+            final waktu = waktuA.compareTo(waktuB);
+            if (waktu != 0) return waktu;
+          }
+          return daftar[a].nama.compareTo(daftar[b].nama);
+        });
     final mendatang =
-        daftar
-            .map((obat) => (obat: obat, waktu: obat.berikutnya(sekarang)))
+        urutan
+            .map(
+              (index) => (
+                obat: daftar[index],
+                waktu: daftar[index].berikutnya(sekarang),
+              ),
+            )
             .where((item) => item.waktu != null)
             .toList()
           ..sort((a, b) => a.waktu!.compareTo(b.waktu!));
@@ -237,19 +240,38 @@ class _JadwalPageState extends State<JadwalPage> {
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
-                      radius: 19,
-                      backgroundColor: _oranye,
-                      child: Icon(Icons.alarm_rounded, color: Colors.white),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'APTIMO',
-                      style: TextStyle(
-                        color: _terakota,
-                        fontSize: 13,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w800,
+                    // TODO: Hapus pemicu contoh pada logo saat jadwal asli tersedia.
+                    InkWell(
+                      key: const ValueKey('aptimoDemoToggle'),
+                      onTap: widget.tampilkanContoh
+                          ? () => setState(() => _lihatKosong = !_lihatKosong)
+                          : null,
+                      borderRadius: BorderRadius.circular(12),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 19,
+                              backgroundColor: _oranye,
+                              child: Icon(
+                                Icons.alarm_rounded,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'APTIMO',
+                              style: TextStyle(
+                                color: _terakota,
+                                fontSize: 13,
+                                letterSpacing: 2,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -266,7 +288,8 @@ class _JadwalPageState extends State<JadwalPage> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Jadwal Minum Obat',
+                  'Cek Jadwal\nMinum Obatmu!',
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     fontSize: 32,
                     height: 1.12,
@@ -277,21 +300,14 @@ class _JadwalPageState extends State<JadwalPage> {
                 const SizedBox(height: 9),
                 Text(
                   _tanggal(sekarang),
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: _terakota,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 20),
-                _PesanPratinjau(
-                  tampilkanContoh: widget.tampilkanContoh,
-                  lihatKosong: _lihatKosong,
-                  onGanti: widget.tampilkanContoh
-                      ? () => setState(() => _lihatKosong = !_lihatKosong)
-                      : null,
-                ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 28),
                 _KartuTerdekat(
                   waktu: terdekat,
                   obat: bersama,
@@ -303,15 +319,15 @@ class _JadwalPageState extends State<JadwalPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Semua Jadwal',
+                        'Jadwal Aktif',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
-                    if (daftar.isNotEmpty)
+                    if (urutan.isNotEmpty)
                       Text(
-                        '${daftar.length} obat',
+                        '${urutan.length} obat',
                         style: const TextStyle(
                           color: _terakota,
                           fontWeight: FontWeight.w600,
@@ -320,7 +336,7 @@ class _JadwalPageState extends State<JadwalPage> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                if (daftar.isEmpty)
+                if (urutan.isEmpty)
                   _Kosong(
                     onTambah: () => _infoTahapBerikutnya(
                       'Tambah jadwal',
@@ -334,22 +350,15 @@ class _JadwalPageState extends State<JadwalPage> {
                       obat: daftar[index],
                       berikutnya: daftar[index].berikutnya(sekarang),
                       sekarang: sekarang,
-                      onPilih: (aksi) {
-                        if (aksi == 'akhiri') {
-                          _akhiri(index);
-                        } else if (aksi == 'ubah') {
-                          setState(() {
-                            final status = _jadwal[index].statusPada(sekarang);
-                            _jadwal[index] = _jadwal[index].denganStatus(
-                              status == StatusJadwal.aktif
-                                  ? StatusJadwal.nonaktif
-                                  : StatusJadwal.aktif,
-                            );
-                          });
-                        }
-                      },
+                      onEdit: () => _infoTahapBerikutnya(
+                        'Edit jadwal',
+                        'Formulir untuk mengubah jadwal ${daftar[index].nama} '
+                            'akan tersedia pada tahap berikutnya. '
+                            'Pratinjau ini belum menyimpan perubahan.',
+                      ),
+                      onAkhiri: () => _akhiri(index),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 18),
                   ],
               ],
             ),
@@ -487,151 +496,165 @@ class _BarisJadwal extends StatelessWidget {
     required this.obat,
     required this.berikutnya,
     required this.sekarang,
-    required this.onPilih,
+    required this.onEdit,
+    required this.onAkhiri,
   });
 
   final JadwalObat obat;
   final DateTime? berikutnya;
   final DateTime sekarang;
-  final ValueChanged<String> onPilih;
+  final VoidCallback onEdit;
+  final VoidCallback onAkhiri;
 
   @override
   Widget build(BuildContext context) {
-    final statusObat = obat.statusPada(sekarang);
-    final aktif = statusObat == StatusJadwal.aktif;
     final belumMulai =
-        aktif &&
         obat.tanggalMulai != null &&
         DateUtils.dateOnly(
           obat.tanggalMulai!,
         ).isAfter(DateUtils.dateOnly(sekarang));
-    final status = switch (statusObat) {
-      StatusJadwal.aktif => belumMulai ? 'Akan dimulai' : 'Aktif',
-      StatusJadwal.nonaktif => 'Nonaktif',
-      StatusJadwal.berakhir => 'Berakhir',
-    };
+    final status = belumMulai ? 'Akan dimulai' : 'Aktif';
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 16, 6, 16),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       decoration: BoxDecoration(
         color: _kartu,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF0E2D8)),
+        border: Border.all(color: const Color(0xFFE2C7B6), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x146A3A23),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 76,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  berikutnya == null ? '—' : _formatJam(berikutnya!),
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    color: aktif ? _terakota : const Color(0xFF6F635D),
-                  ),
-                ),
-                Text(
-                  berikutnya == null
-                      ? 'Tanpa alarm'
-                      : _hariRelatif(berikutnya!, sekarang),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF645A53),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 2,
-            height: 52,
-            margin: const EdgeInsets.only(right: 12),
-            color: aktif ? _oranye : const Color(0xFFDDD0C6),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  obat.nama,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (obat.dosis != null)
-                  Text(obat.dosis!, style: const TextStyle(fontSize: 14)),
-                const SizedBox(height: 7),
-                Text(
-                  '${obat.jam.length} kali sehari · ${_ringkasanHari(obat.hari)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF645A53),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Jam: ${obat.jam.map(_formatWaktu).join(', ')}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF645A53),
-                  ),
-                ),
-                if (obat.tanggalSelesai != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    'Sampai ${_tanggal(obat.tanggalSelesai!)}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF645A53),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 9),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: aktif ? _peach : const Color(0xFFF2EEEA),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        color: aktif ? _terakota : _teks,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 86,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      berikutnya == null ? '-' : _formatJam(berikutnya!),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: _terakota,
                       ),
                     ),
-                  ),
+                    Text(
+                      berikutnya == null
+                          ? 'Belum ada'
+                          : _hariRelatif(berikutnya!, sekarang),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF645A53),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: _peach,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          status,
+                          style: const TextStyle(
+                            color: _terakota,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      obat.nama,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (obat.dosis != null)
+                      Text(obat.dosis!, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(height: 7),
+                    Text(
+                      '${obat.jam.length} kali sehari · ${_ringkasanHari(obat.hari)}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF645A53),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Jam: ${obat.jam.map(_formatWaktu).join(', ')}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF645A53),
+                      ),
+                    ),
+                    if (obat.tanggalSelesai != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'Sampai ${_tanggal(obat.tanggalSelesai!)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF645A53),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: Color(0xFFF0E2D8)),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined, size: 19),
+            label: const Text('Edit Jadwal'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              backgroundColor: _terakota,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
-          if (statusObat != StatusJadwal.berakhir)
-            PopupMenuButton<String>(
-              tooltip: 'Opsi jadwal ${obat.nama}',
-              onSelected: onPilih,
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'ubah',
-                  child: Text(aktif ? 'Nonaktifkan' : 'Aktifkan kembali'),
-                ),
-                const PopupMenuItem(
-                  value: 'akhiri',
-                  child: Text('Akhiri jadwal'),
-                ),
-              ],
-              icon: const Icon(Icons.more_vert_rounded, color: _terakota),
-            )
-          else
-            const SizedBox(width: 42),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: onAkhiri,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              backgroundColor: const Color(0xFFF9EEE7),
+              foregroundColor: _terakota,
+              side: const BorderSide(color: Color(0xFFD7AC90)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Akhiri Jadwal'),
+          ),
         ],
       ),
     );
@@ -657,13 +680,13 @@ class _Kosong extends StatelessWidget {
           const Icon(Icons.medication_outlined, size: 44, color: _terakota),
           const SizedBox(height: 16),
           const Text(
-            'Belum ada jadwal obat',
+            'Belum ada jadwal aktif',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Jadwal yang Anda tambahkan akan tersusun di sini.',
+            'Jadwal aktif yang Anda tambahkan akan terlihat di sini.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, height: 1.4),
           ),
@@ -673,52 +696,6 @@ class _Kosong extends StatelessWidget {
             icon: const Icon(Icons.add_rounded),
             label: const Text('Tambah jadwal'),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PesanPratinjau extends StatelessWidget {
-  const _PesanPratinjau({
-    required this.tampilkanContoh,
-    required this.lihatKosong,
-    required this.onGanti,
-  });
-
-  final bool tampilkanContoh;
-  final bool lihatKosong;
-  final VoidCallback? onGanti;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE2C6B3)),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Pratinjau tampilan · Alarm belum aktif',
-            style: TextStyle(color: _terakota, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 5),
-          const Text(
-            'Jadwal pada tahap ini belum tersimpan dan belum menghasilkan pengingat.',
-            style: TextStyle(fontSize: 13, height: 1.4),
-          ),
-          if (tampilkanContoh) ...[
-            const SizedBox(height: 7),
-            TextButton(
-              onPressed: onGanti,
-              child: Text(
-                lihatKosong ? 'Lihat jadwal contoh' : 'Lihat keadaan kosong',
-              ),
-            ),
-          ],
         ],
       ),
     );
