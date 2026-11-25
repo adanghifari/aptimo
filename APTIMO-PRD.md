@@ -1,6 +1,6 @@
 # APTIMO — Product Requirements Document
 
-**Versi 0.5 · Draf kerja · 26 November 2026**
+**Versi 0.6 · Draf kerja · 26 November 2026**
 
 Dokumen ini menjadi acuan tujuan produk, perilaku aplikasi, dan syarat selesai versi pertama. Keputusan yang belum disepakati dicatat di bagian 7. Rincian visual yang masih berubah disimpan di [Catatan UI](APTIMO-UI.md); penyempurnaan tampilan yang tidak mengubah perilaku produk tidak memerlukan revisi PRD.
 
@@ -48,12 +48,12 @@ Versi pertama berfokus pada jadwal, alarm, konfirmasi konsumsi, dan riwayat. Dis
 ### 3.2 Pengaturan jam minum
 
 1. Isian pertama adalah **Berapa kali sehari?**, berupa bilangan bulat minimal 1.
-2. Setelah jumlah diisi, tampilkan **Jam pertama**. Untuk satu kali sehari, hanya jam ini yang diperlukan.
-3. Untuk lebih dari satu kali sehari, pengguna memilih salah satu mode berikut:
+2. Untuk satu kali sehari, setelah jumlah diisi tampilkan **Jam pertama** tanpa pilihan mode.
+3. Untuk lebih dari satu kali sehari, setelah jumlah diisi pengguna memilih mode terlebih dahulu. Setelah mode dipilih, tampilkan isian jam yang sesuai:
 
 | Mode | Isian dan validasi |
 |---|---|
-| **Atur jam sendiri** | Tampilkan isian jam sebanyak jumlah minum per hari, termasuk jam pertama. Semua jam wajib diisi dan berurutan naik secara ketat: jam 1 < jam 2 < jam 3, dan seterusnya. Jam yang sama atau urutan terbalik ditolak dengan pesan pada isian terkait. |
+| **Atur jam sendiri** | Tampilkan isian jam sebanyak jumlah minum per hari, termasuk jam pertama. Jam berikutnya baru dapat dipilih setelah jam sebelumnya; pemilih hanya menawarkan waktu mulai satu menit setelah jam sebelumnya sampai 23.59. Jika jam sebelumnya berubah, jam berikutnya yang tidak lagi valid perlu dipilih ulang. Semua jam wajib diisi dan berurutan naik secara ketat: jam 1 < jam 2 < jam 3, dan seterusnya. |
 | **Atur dengan interval** | Pengguna mengisi jam pertama dan jarak antarjam dalam jam dan menit. Interval harus lebih dari nol. Aplikasi menghitung dan menampilkan semua jam sebelum jadwal disimpan. Contoh: 3 kali sehari, 08.00, interval 4 jam menjadi 08.00, 12.00, 16.00. Jam terakhir harus paling lambat 23.59 pada hari yang sama; hasil yang melewati tengah malam ditolak dengan pesan yang jelas. |
 
 Saat jadwal baru dibuat, jam yang sudah lewat pada hari pembuatan tidak dianggap sebagai pengingat tertinggal atau catatan **Belum dikonfirmasi**. Hanya jam yang masih akan datang yang berlaku hari itu. Mulai hari berikutnya, seluruh urutan jam berlaku lagi sesuai hari aktif dan periode jadwal. Tanggal selesai tetap inklusif.

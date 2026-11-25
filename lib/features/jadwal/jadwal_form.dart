@@ -101,17 +101,32 @@ class _FormJadwalState extends State<_FormJadwal> {
   }
 
   Future<void> _pilihJam(int index) async {
+    final sebelumnya = index > 0 && _mode == ModeJam.sendiri
+        ? _jam[index - 1]
+        : null;
+    if (index > 0 && _mode == ModeJam.sendiri && sebelumnya == null) return;
+    final minimalMenit = sebelumnya == null ? 0 : _menit(sebelumnya) + 1;
+    if (minimalMenit > 1439) return;
     final pilihan = await showDialog<TimeOfDay>(
       context: context,
       barrierDismissible: false,
       builder: (context) => _PemilihJam(
         awal: _jam[index] ?? const TimeOfDay(hour: 8, minute: 0),
-        judul: index == 0 ? 'Jam pertama' : 'Jam ${index + 1}',
+        judul: _labelJam(index),
+        minimalMenit: minimalMenit,
       ),
     );
     if (pilihan != null && mounted) {
       setState(() {
         _jam[index] = pilihan;
+        if (_mode == ModeJam.sendiri) {
+          for (var i = index + 1; i < _jam.length; i++) {
+            if (_jam[i - 1] == null ||
+                (_jam[i] != null && _menit(_jam[i]!) <= _menit(_jam[i - 1]!))) {
+              _jam[i] = null;
+            }
+          }
+        }
         _pesan = null;
       });
     }
@@ -179,7 +194,7 @@ class _FormJadwalState extends State<_FormJadwal> {
       return null;
     }
     if (_menit(_jam.first!) + (_frekuensi! - 1) * _intervalMenit! > 1439) {
-      return 'Jam terakhir melewati 23.59. Kurangi jarak atau pilih jam pertama yang lebih awal.';
+      return 'Jam ke-${_frekuensi!} melewati 23.59. Kurangi jarak atau pilih Jam ke-1 yang lebih awal.';
     }
     return null;
   }
@@ -324,17 +339,16 @@ class _FormJadwalState extends State<_FormJadwal> {
                     ),
                     if (jumlah != null) ...[
                       const SizedBox(height: 24),
-                      _judulBagian('Jam minum'),
-                      const SizedBox(height: 10),
-                      _tombolJam(0, 'Jam pertama'),
-                      if (jumlah > 1) ...[
-                        const SizedBox(height: 18),
+                      if (jumlah == 1) ...[
+                        _judulBagian('Jam minum'),
+                        const SizedBox(height: 10),
+                        _tombolJam(0),
+                      ] else ...[
+                        _judulBagian('Cara mengatur jam'),
+                        const SizedBox(height: 7),
                         const Text(
-                          'Bagaimana ingin mengatur jam berikutnya?',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          'Pilih cara yang sesuai dengan aturan obat Anda.',
+                          style: TextStyle(fontSize: 15),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -347,6 +361,10 @@ class _FormJadwalState extends State<_FormJadwal> {
                         ),
                         if (_validasi && _mode == null)
                           _error('Pilih salah satu cara mengatur jam.'),
+                        if (_mode != null) ...[
+                          const SizedBox(height: 22),
+                          _judulBagian('Jam minum'),
+                        ],
                         if (_mode == ModeJam.sendiri) ...[
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 10),
@@ -354,8 +372,10 @@ class _FormJadwalState extends State<_FormJadwal> {
                               'Pilih setiap jam sesuai urutan dalam satu hari.',
                             ),
                           ),
+                          _tombolJam(0),
+                          const SizedBox(height: 10),
                           for (var i = 1; i < jumlah; i++) ...[
-                            _tombolJam(i, 'Jam ${i + 1}'),
+                            _tombolJam(i),
                             const SizedBox(height: 10),
                           ],
                         ],
@@ -363,9 +383,11 @@ class _FormJadwalState extends State<_FormJadwal> {
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 10),
                             child: Text(
-                              'Jam berikutnya dihitung otomatis dari jam pertama.',
+                              'Pilih Jam ke-1, lalu isi jarak antarjam. Jam berikutnya akan dihitung otomatis.',
                             ),
                           ),
+                          _tombolJam(0),
+                          const SizedBox(height: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -404,7 +426,7 @@ class _FormJadwalState extends State<_FormJadwal> {
                         if (_adaJamLewatHariIni) ...[
                           const SizedBox(height: 8),
                           const Text(
-                            'Jam yang sudah lewat hari ini tidak dihitung. Pada hari aktif berikutnya, jadwal dimulai lagi dari jam pertama.',
+                            'Jam yang sudah lewat hari ini tidak dihitung. Pada hari aktif berikutnya, jadwal dimulai lagi dari Jam ke-1.',
                             style: TextStyle(fontSize: 14, height: 1.4),
                           ),
                         ],
@@ -595,9 +617,15 @@ class _FormJadwalState extends State<_FormJadwal> {
     }),
   );
 
-  Widget _tombolJam(int index, String label) {
+  Widget _tombolJam(int index) {
+    final label = _labelJam(index);
     final terpilih = _jam[index];
-    final sebelumnya = index > 0 ? _jam[index - 1] : null;
+    final sebelumnya = index > 0 && _mode == ModeJam.sendiri
+        ? _jam[index - 1]
+        : null;
+    final menungguSebelumnya =
+        index > 0 && _mode == ModeJam.sendiri && sebelumnya == null;
+    final tidakAdaSisaJam = sebelumnya != null && _menit(sebelumnya) == 1439;
     final keliru =
         terpilih != null &&
         sebelumnya != null &&
@@ -605,16 +633,67 @@ class _FormJadwalState extends State<_FormJadwal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        OutlinedButton.icon(
-          onPressed: () => _pilihJam(index),
-          icon: const Icon(Icons.access_time_rounded),
-          label: Text(
-            '$label: ${terpilih == null ? 'Pilih jam' : _formatJam(terpilih)}',
+        OutlinedButton(
+          onPressed: menungguSebelumnya || tidakAdaSisaJam
+              ? null
+              : () => _pilihJam(index),
+          style: OutlinedButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            minimumSize: const Size.fromHeight(60),
+            foregroundColor: _terakota,
+            backgroundColor: terpilih == null ? null : _peach,
+            side: BorderSide(
+              color: terpilih == null ? const Color(0xFFD7AC90) : _terakota,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          style: _gayaPilihan,
+          child: Row(
+            children: [
+              Icon(
+                terpilih == null
+                    ? Icons.access_time_rounded
+                    : Icons.check_circle_rounded,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$label: ${terpilih == null ? 'Pilih jam' : _formatJam(terpilih)}',
+                      style: TextStyle(
+                        fontWeight: terpilih == null
+                            ? FontWeight.w500
+                            : FontWeight.w700,
+                        fontSize: terpilih == null ? 15 : 17,
+                      ),
+                    ),
+                    if (terpilih != null)
+                      const Text(
+                        'Sudah dipilih · Ketuk untuk ubah',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        if (_validasi && terpilih == null) _error('$label perlu dipilih.'),
-        if (keliru) _error('$label harus lebih lambat dari jam sebelumnya.'),
+        if (menungguSebelumnya)
+          _error('Pilih ${_labelJam(index - 1)} lebih dulu.'),
+        if (tidakAdaSisaJam)
+          _error(
+            'Tidak ada waktu setelah 23.59. Ubah ${_labelJam(index - 1)}.',
+          ),
+        if (_validasi &&
+            terpilih == null &&
+            !menungguSebelumnya &&
+            !tidakAdaSisaJam)
+          _error('$label perlu dipilih.'),
+        if (keliru) _error('$label harus setelah jam sebelumnya.'),
       ],
     );
   }
@@ -651,29 +730,29 @@ class _FormJadwalState extends State<_FormJadwal> {
 }
 
 class _PemilihJam extends StatefulWidget {
-  const _PemilihJam({required this.awal, required this.judul});
+  const _PemilihJam({
+    required this.awal,
+    required this.judul,
+    required this.minimalMenit,
+  });
 
   final TimeOfDay awal;
   final String judul;
+  final int minimalMenit;
 
   @override
   State<_PemilihJam> createState() => _PemilihJamState();
 }
 
 class _PemilihJamState extends State<_PemilihJam> {
-  late int _jam = widget.awal.hour;
-  late int _menit = widget.awal.minute;
-  late final _penggulungJam = FixedExtentScrollController(initialItem: _jam);
-  late final _penggulungMenit = FixedExtentScrollController(
-    initialItem: _menit,
-  );
+  late final int _minimalJam = widget.minimalMenit ~/ 60;
+  late int _jam = math.max(widget.awal.hour, _minimalJam);
+  late int _menit = _jam == widget.awal.hour
+      ? math.max(widget.awal.minute, _menitPertama(_jam))
+      : _menitPertama(_jam);
 
-  @override
-  void dispose() {
-    _penggulungJam.dispose();
-    _penggulungMenit.dispose();
-    super.dispose();
-  }
+  int _menitPertama(int jam) =>
+      jam == _minimalJam ? widget.minimalMenit % 60 : 0;
 
   @override
   Widget build(BuildContext context) {
@@ -689,19 +768,32 @@ class _PemilihJamState extends State<_PemilihJam> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Geser angka untuk memilih waktu.',
-              style: TextStyle(fontSize: 15, color: _cokelat),
+            Text(
+              widget.minimalMenit == 0
+                  ? 'Geser angka untuk memilih waktu.'
+                  : '${widget.judul} harus setelah jam sebelumnya.',
+              style: const TextStyle(fontSize: 15, color: _cokelat),
             ),
+            if (widget.minimalMenit > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Pilihan mulai ${_formatJam(TimeOfDay(hour: widget.minimalMenit ~/ 60, minute: widget.minimalMenit % 60))}.',
+                style: const TextStyle(fontSize: 14, color: _terakota),
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                  child: _kolomAngka(
+                  child: _KolomAngka(
                     label: 'Jam',
-                    jumlah: 24,
-                    controller: _penggulungJam,
-                    onPilih: (nilai) => setState(() => _jam = nilai),
+                    mulai: _minimalJam,
+                    jumlah: 24 - _minimalJam,
+                    awal: _jam,
+                    onPilih: (nilai) => setState(() {
+                      _jam = nilai;
+                      _menit = math.max(_menit, _menitPertama(nilai));
+                    }),
                   ),
                 ),
                 const Padding(
@@ -712,10 +804,12 @@ class _PemilihJamState extends State<_PemilihJam> {
                   ),
                 ),
                 Expanded(
-                  child: _kolomAngka(
+                  child: _KolomAngka(
+                    key: ValueKey('menit-$_jam'),
                     label: 'Menit',
-                    jumlah: 60,
-                    controller: _penggulungMenit,
+                    mulai: _menitPertama(_jam),
+                    jumlah: 60 - _menitPertama(_jam),
+                    awal: _menit,
                     onPilih: (nilai) => setState(() => _menit = nilai),
                   ),
                 ),
@@ -747,25 +841,53 @@ class _PemilihJamState extends State<_PemilihJam> {
       ],
     );
   }
+}
 
-  Widget _kolomAngka({
-    required String label,
-    required int jumlah,
-    required FixedExtentScrollController controller,
-    required ValueChanged<int> onPilih,
-  }) {
+class _KolomAngka extends StatefulWidget {
+  const _KolomAngka({
+    super.key,
+    required this.label,
+    required this.mulai,
+    required this.jumlah,
+    required this.awal,
+    required this.onPilih,
+  });
+
+  final String label;
+  final int mulai;
+  final int jumlah;
+  final int awal;
+  final ValueChanged<int> onPilih;
+
+  @override
+  State<_KolomAngka> createState() => _KolomAngkaState();
+}
+
+class _KolomAngkaState extends State<_KolomAngka> {
+  late final _penggulung = FixedExtentScrollController(
+    initialItem: widget.awal - widget.mulai,
+  );
+
+  @override
+  void dispose() {
+    _penggulung.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label,
+          widget.label,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 7),
         SizedBox(
           height: 190,
           child: CupertinoPicker(
-            scrollController: controller,
+            scrollController: _penggulung,
             itemExtent: 52,
             useMagnifier: true,
             magnification: 1.08,
@@ -775,9 +897,14 @@ class _PemilihJamState extends State<_PemilihJam> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onSelectedItemChanged: onPilih,
+            onSelectedItemChanged: (index) =>
+                widget.onPilih(widget.mulai + index),
             children: [
-              for (var nilai = 0; nilai < jumlah; nilai++)
+              for (
+                var nilai = widget.mulai;
+                nilai < widget.mulai + widget.jumlah;
+                nilai++
+              )
                 Center(
                   child: Text(
                     nilai.toString().padLeft(2, '0'),
@@ -793,6 +920,8 @@ class _PemilihJamState extends State<_PemilihJam> {
 }
 
 int _menit(TimeOfDay jam) => jam.hour * 60 + jam.minute;
+
+String _labelJam(int index) => 'Jam ke-${index + 1}';
 
 List<TimeOfDay>? hitungJamInterval(
   TimeOfDay pertama,

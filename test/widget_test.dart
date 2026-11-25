@@ -85,7 +85,7 @@ void main() {
     expect(find.text('Berapa kali sehari?'), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('jumlahMinum')), '1');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Jam pertama: Pilih jam'));
+    await tester.tap(find.text('Jam ke-1: Pilih jam'));
     await tester.pumpAndSettle();
     expect(find.byType(CupertinoPicker), findsNWidgets(2));
     expect(find.text('Jam terpilih: 08.00'), findsOneWidget);
@@ -103,6 +103,91 @@ void main() {
     expect(find.text('Jadwal Aktif'), findsOneWidget);
     expect(find.text('1 obat'), findsOneWidget);
     expect(find.text('Vitamin C'), findsWidgets);
+  });
+
+  testWidgets('pilihan metode muncul sebelum isian jam untuk beberapa kali', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const AptimoApp());
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('jumlahMinum')), '3');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cara mengatur jam'), findsOneWidget);
+    expect(find.text('Jam minum'), findsNothing);
+    expect(find.text('Jam ke-1: Pilih jam'), findsNothing);
+
+    await tester.tap(find.text('Atur sendiri'));
+    await tester.pumpAndSettle();
+    expect(find.text('Jam minum'), findsOneWidget);
+    expect(find.text('Jam ke-1: Pilih jam'), findsOneWidget);
+    expect(find.text('Jam ke-2: Pilih jam'), findsOneWidget);
+
+    await tester.tap(find.text('Interval'));
+    await tester.pumpAndSettle();
+    expect(find.text('Jam ke-1: Pilih jam'), findsOneWidget);
+    expect(find.text('Jam ke-2: Pilih jam'), findsNothing);
+  });
+
+  testWidgets('jam berikutnya dimulai satu menit setelah jam sebelumnya', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const AptimoApp());
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('jumlahMinum')), '2');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Atur sendiri'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Jam ke-1: Pilih jam'));
+    await tester.pumpAndSettle();
+    final pemilihJam = tester.widget<CupertinoPicker>(
+      find.byType(CupertinoPicker).first,
+    );
+    pemilihJam.scrollController!.jumpToItem(9);
+    await tester.pumpAndSettle();
+    expect(find.text('Jam terpilih: 09.00'), findsOneWidget);
+    await tester.tap(find.text('Pilih'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jam ke-1: 09.00'), findsOneWidget);
+    expect(find.text('Sudah dipilih · Ketuk untuk ubah'), findsOneWidget);
+    await tester.ensureVisible(find.text('Jam ke-2: Pilih jam'));
+    await tester.tap(find.text('Jam ke-2: Pilih jam'));
+    await tester.pumpAndSettle();
+    expect(find.text('Jam ke-2 harus setelah jam sebelumnya.'), findsOneWidget);
+    expect(find.text('Pilihan mulai 09.01.'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(CupertinoPicker).first,
+        matching: find.text('08'),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CupertinoPicker).last,
+        matching: find.text('00'),
+      ),
+      findsNothing,
+    );
+    expect(find.text('Jam terpilih: 09.01'), findsOneWidget);
+    await tester.tap(find.text('Pilih'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Jam ke-1: 09.00'));
+    await tester.tap(find.text('Jam ke-1: 09.00'));
+    await tester.pumpAndSettle();
+    tester
+        .widget<CupertinoPicker>(find.byType(CupertinoPicker).first)
+        .scrollController!
+        .jumpToItem(10);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pilih'));
+    await tester.pumpAndSettle();
+    expect(find.text('Jam ke-2: Pilih jam'), findsOneWidget);
   });
 
   test('interval tetap pada hari yang sama', () {
