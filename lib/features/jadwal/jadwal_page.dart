@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'jadwal_form.dart';
+
 const _teks = Color(0xFF302520);
 const _terakota = Color(0xFF91431E);
 const _oranye = Color(0xFFE97638);
@@ -15,12 +17,14 @@ class JadwalObat {
     required this.hari,
     required this.status,
     this.dosis,
+    this.catatan,
     this.tanggalMulai,
     this.tanggalSelesai,
   });
 
   final String nama;
   final String? dosis;
+  final String? catatan;
   final List<TimeOfDay> jam;
   final Set<int> hari;
   final DateTime? tanggalMulai;
@@ -41,6 +45,7 @@ class JadwalObat {
   JadwalObat denganStatus(StatusJadwal baru) => JadwalObat(
     nama: nama,
     dosis: dosis,
+    catatan: catatan,
     jam: jam,
     hari: hari,
     tanggalMulai: tanggalMulai,
@@ -154,6 +159,32 @@ class _JadwalPageState extends State<JadwalPage> {
     );
   }
 
+  Future<void> _tambahJadwal() async {
+    final data = await tampilkanFormTambahJadwal(context);
+    if (data == null || !mounted) return;
+    setState(() {
+      if (_lihatKosong) _jadwal.clear();
+      _lihatKosong = false;
+      _jadwal.add(
+        JadwalObat(
+          nama: data.nama,
+          dosis: data.dosis,
+          catatan: data.catatan,
+          jam: data.jam,
+          hari: data.hari,
+          status: StatusJadwal.aktif,
+          tanggalMulai: data.tanggalMulai,
+          tanggalSelesai: data.tanggalSelesai,
+        ),
+      );
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Jadwal ditambahkan sementara. Alarm belum aktif.'),
+      ),
+    );
+  }
+
   Future<void> _akhiri(int index) async {
     final obat = _jadwal[index];
     final setuju = await showDialog<bool>(
@@ -221,13 +252,9 @@ class _JadwalPageState extends State<JadwalPage> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _infoTahapBerikutnya(
-          'Tambah jadwal',
-          'Formulir jadwal akan tersedia pada tahap berikutnya. '
-              'Pratinjau ini belum menyimpan obat atau mengaktifkan alarm.',
-        ),
-        backgroundColor: _terakota,
-        foregroundColor: Colors.white,
+        onPressed: _tambahJadwal,
+        backgroundColor: _peach,
+        foregroundColor: _terakota,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Tambah jadwal'),
       ),
@@ -337,13 +364,7 @@ class _JadwalPageState extends State<JadwalPage> {
                 ),
                 const SizedBox(height: 14),
                 if (urutan.isEmpty)
-                  _Kosong(
-                    onTambah: () => _infoTahapBerikutnya(
-                      'Tambah jadwal',
-                      'Formulir jadwal akan tersedia pada tahap berikutnya. '
-                          'Pratinjau ini belum menyimpan obat atau mengaktifkan alarm.',
-                    ),
-                  )
+                  _Kosong(onTambah: _tambahJadwal)
                 else
                   for (final index in urutan) ...[
                     _BarisJadwal(

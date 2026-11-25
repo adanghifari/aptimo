@@ -1,6 +1,6 @@
 # APTIMO — Product Requirements Document
 
-**Versi 0.4 · Draf kerja · 26 November 2026**
+**Versi 0.5 · Draf kerja · 26 November 2026**
 
 Dokumen ini menjadi acuan tujuan produk, perilaku aplikasi, dan syarat selesai versi pertama. Keputusan yang belum disepakati dicatat di bagian 7. Rincian visual yang masih berubah disimpan di [Catatan UI](APTIMO-UI.md); penyempurnaan tampilan yang tidak mengubah perilaku produk tidak memerlukan revisi PRD.
 
@@ -40,7 +40,7 @@ Versi pertama berfokus pada jadwal, alarm, konfirmasi konsumsi, dan riwayat. Dis
 ### 3.1 Membuat dan mengelola jadwal
 
 - Nama obat wajib. Dosis dan catatan bersifat opsional.
-- Pengguna memilih jumlah minum per hari, jam minum, hari berlaku (setiap hari atau hari tertentu), tanggal mulai, dan tanggal selesai opsional. Tanggal selesai bersifat inklusif.
+- Pengguna memilih jumlah minum per hari, jam minum, hari berlaku (setiap hari atau hari tertentu), tanggal mulai, dan tanggal selesai opsional. Tanggal selesai bersifat inklusif; pada jadwal baru tanggal selesai tidak boleh mendahului tanggal mulai atau hari pembuatan.
 - Jadwal dapat diedit, dinonaktifkan sementara, diaktifkan kembali, atau diakhiri. Perubahan memperbarui alarm mendatang tanpa menghapus riwayat kejadian sebelumnya.
 - **Akhiri jadwal** menghentikan pengingat mendatang untuk seluruh jadwal obat tersebut. Tindakan ini tidak sama dengan **Sudah diminum**, yang hanya mengonfirmasi satu kejadian. Jadwal dengan tanggal selesai berakhir otomatis setelah periode yang ditetapkan.
 - Jadwal yang belum dimulai, aktif, nonaktif, dan sudah berakhir harus dapat dibedakan melalui label status yang jelas.
@@ -54,9 +54,9 @@ Versi pertama berfokus pada jadwal, alarm, konfirmasi konsumsi, dan riwayat. Dis
 | Mode | Isian dan validasi |
 |---|---|
 | **Atur jam sendiri** | Tampilkan isian jam sebanyak jumlah minum per hari, termasuk jam pertama. Semua jam wajib diisi dan berurutan naik secara ketat: jam 1 < jam 2 < jam 3, dan seterusnya. Jam yang sama atau urutan terbalik ditolak dengan pesan pada isian terkait. |
-| **Atur dengan interval** | Pengguna mengisi jam pertama dan jarak antarjam dalam jam dan menit. Interval harus lebih dari nol. Aplikasi menghitung dan menampilkan semua jam sebelum jadwal disimpan. Contoh: 3 kali sehari, 08.00, interval 4 jam menjadi 08.00, 12.00, 16.00. |
+| **Atur dengan interval** | Pengguna mengisi jam pertama dan jarak antarjam dalam jam dan menit. Interval harus lebih dari nol. Aplikasi menghitung dan menampilkan semua jam sebelum jadwal disimpan. Contoh: 3 kali sehari, 08.00, interval 4 jam menjadi 08.00, 12.00, 16.00. Jam terakhir harus paling lambat 23.59 pada hari yang sama; hasil yang melewati tengah malam ditolak dengan pesan yang jelas. |
 
-Perilaku interval yang melewati tengah malam **belum diputuskan**. Jangan mengunci penolakan atau penerimaan kasus ini sebelum aturan hari berlaku dan tanggal selesai disepakati; lihat catatan di bagian 7.
+Saat jadwal baru dibuat, jam yang sudah lewat pada hari pembuatan tidak dianggap sebagai pengingat tertinggal atau catatan **Belum dikonfirmasi**. Hanya jam yang masih akan datang yang berlaku hari itu. Mulai hari berikutnya, seluruh urutan jam berlaku lagi sesuai hari aktif dan periode jadwal. Tanggal selesai tetap inklusif.
 
 ### 3.3 Alarm dan tindakan
 
@@ -109,20 +109,18 @@ Rancangan komposisi, palet, teks judul, dan gaya komponen yang sedang diuji ada 
 - Membuka aplikasi menampilkan logo lalu Jadwal; navigasi bawah hanya berisi Jadwal dan Riwayat. Semua teks buatan aplikasi berbahasa Indonesia.
 - Halaman Jadwal memiliki satu kartu pengingat terdekat, daftar **Jadwal Aktif**, dan cara tambah jadwal yang jelas. Jadwal nonaktif dan berakhir tidak tampil dalam daftar aktif; jadwal nonaktif tetap dapat ditemukan dan diaktifkan kembali melalui tempat pengelolaan jadwal yang akan dirancang. **Akhiri jadwal** tidak mencatat konsumsi.
 - Tanpa internet, pengguna dapat membuat, mengedit, menonaktifkan, mengaktifkan, dan mengakhiri jadwal, lalu melihat data dan riwayat yang tetap ada setelah aplikasi dibuka kembali.
-- Frekuensi satu kali hanya memerlukan jam pertama. Mode manual untuk tiga kali meminta tiga jam dan menolak duplikat serta urutan terbalik. Mode interval 08.00 dengan jarak 4 jam menghasilkan 08.00, 12.00, dan 16.00; interval nol ditolak.
+- Frekuensi satu kali hanya memerlukan jam pertama. Mode manual untuk tiga kali meminta tiga jam dan menolak duplikat serta urutan terbalik. Mode interval 08.00 dengan jarak 4 jam menghasilkan 08.00, 12.00, dan 16.00; interval nol dan jam yang melewati 23.59 ditolak.
+- Jika jadwal 08.00, 12.00, dan 16.00 dibuat pada pukul 13.00, hanya 16.00 yang berlaku pada hari itu. Hari aktif berikutnya kembali dimulai dari 08.00 tanpa membuat kejadian tertinggal untuk 08.00 dan 12.00 pada hari pembuatan.
 - Jadwal dengan tanggal selesai tidak memicu alarm setelah periode berakhir. Riwayat lama tetap ada.
 - Dua obat pada waktu yang sama memicu satu alarm dengan konfirmasi terpisah. Tunda tidak menggeser jadwal rutin; Hentikan tidak mengonfirmasi konsumsi.
 - Pada perangkat Android asli, uji bunyi berulang, getaran, banner, ketiga tindakan, alarm saat aplikasi terbuka, serta layar alarm ketika perangkat tidur atau terkunci. Perangkat tetap terkunci setelah layar alarm ditutup.
 - Uji pemulihan alarm setelah restart tanpa membuka APTIMO dan perubahan jadwal tanpa meninggalkan alarm lama. Saat izin tidak tersedia, aplikasi menampilkan keadaan sebenarnya dan langkah yang relevan.
 - Uji keterbacaan dengan teks sistem diperbesar, label tombol/status, serta area sentuh pada layar berukuran berbeda.
 
-**Catatan:** kriteria untuk interval yang melewati tengah malam baru dapat difinalkan setelah keputusan pada bagian 7 dibuat.
-
 ## 7. Keputusan terbuka
 
 | Topik | Status dan catatan |
 |---|---|
-| Interval lintas tengah malam | **Belum diputuskan:** PRD sebelumnya mengusulkan penolakan. Alternatifnya adalah mengizinkan jam berikutnya pada hari kalender berikutnya. Keputusan perlu menjelaskan hubungan dengan hari aktif dan tanggal selesai. Jangan jadikan usulan lama sebagai validasi final. |
-| Kejadian lewat tanpa konfirmasi | **Perlu dirinci:** apakah kartu utama menampilkan kejadian terlewat sebelum pengingat mendatang, dan bagaimana urutannya jika ada beberapa kejadian. Status tetap **Belum dikonfirmasi**. |
+| Kejadian lewat tanpa konfirmasi | **Perlu dirinci untuk jadwal yang sudah berjalan:** apakah kartu utama menampilkan kejadian terlewat sebelum pengingat mendatang, dan bagaimana urutannya jika ada beberapa kejadian. Jam yang telah lewat sebelum jadwal dibuat hari ini tidak membuat kejadian; status kejadian yang memang terjadwal tetap **Belum dikonfirmasi**. |
 | Akses jadwal nonaktif | **Perlu dirancang:** jadwal nonaktif dan berakhir tidak tampil di daftar Jadwal Aktif. Sediakan tempat lain untuk menemukan jadwal nonaktif dan mengaktifkannya kembali sebelum fitur nonaktifkan tersedia. |
 | Implementasi alarm | **Perlu diuji:** pilih pendekatan Android setelah bunyi berulang, getaran, layar kunci, izin, dan pemulihan setelah restart berhasil diuji pada HP asli. |

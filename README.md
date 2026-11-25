@@ -1,24 +1,11 @@
 # APTIMO
 
-APTIMO adalah aplikasi pengingat jadwal minum obat untuk Android yang dirancang berjalan secara lokal. [PRD](APTIMO-PRD.md) memuat tujuan, perilaku, dan kriteria selesai; [Catatan UI](APTIMO-UI.md) memuat arah tampilan yang sedang diuji. Perbaikan visual kecil tidak perlu dicatat di PRD.
+APTIMO adalah aplikasi Android untuk membantu pengguna mengingat waktu minum obat. Aplikasi ini dirancang sederhana dan berbahasa Indonesia agar jadwal mudah dibaca oleh berbagai kelompok usia.
 
-## Menjalankan pratinjau halaman Jadwal
+Pengguna dapat mengatur nama obat, frekuensi minum, jam, hari berlaku, serta tanggal mulai dan selesai. Halaman **Jadwal** mengutamakan waktu minum berikutnya dan menampilkan jadwal yang masih aktif. **Riwayat** ditujukan untuk melihat obat yang telah dikonfirmasi diminum dan pengingat yang belum dikonfirmasi.
 
-```powershell
-flutter run --dart-define=APTIMO_DEMO=true
-```
+APTIMO dirancang bekerja secara lokal di ponsel, tanpa akun atau backend. Jadwal dan riwayat nantinya disimpan di perangkat. Rancangan alarm akan membantu pengguna menangani pengingat dengan pilihan **Sudah diminum**, **Tunda 10 menit**, atau **Hentikan alarm** tanpa menyamakan penghentian bunyi dengan konfirmasi minum obat.
 
-Mode ini menampilkan obat contoh untuk meninjau kartu pengingat terdekat, daftar jadwal aktif, dan keadaan kosong. Ketuk logo **APTIMO** di kiri atas untuk berganti antara jadwal contoh dan keadaan kosong. Pemicu sementara ini hanya aktif saat `APTIMO_DEMO=true` dan harus dihapus setelah fitur jadwal asli tersedia. Tanpa `APTIMO_DEMO`, halaman dimulai tanpa jadwal contoh.
+**APTIMO masih dikembangkan. Alarm dan penyimpanan permanen belum tersedia, sehingga versi saat ini belum dapat digunakan sebagai pengingat minum obat.**
 
-**Tahap saat ini hanya pratinjau UI.** Jadwal contoh dan perubahan status hanya ada dalam memori. Form tambah jadwal, alarm Android, izin, penyimpanan lokal, dan riwayat konsumsi belum diimplementasikan. Jangan gunakan pratinjau ini sebagai alarm obat.
-
-## Catatan teknis awal
-
-Paket Flutter [`alarm`](https://pub.dev/packages/alarm) merupakan kandidat untuk prototipe, belum keputusan akhir. Perilaku bunyi berulang, getaran, layar kunci, izin, dan pemulihan setelah restart perlu diuji di HP Android asli. Referensi awal: [alarm Android](https://developer.android.com/develop/background-work/services/alarms), [notifikasi Android](https://developer.android.com/develop/ui/views/notifications/notification-permission), dan [batas layar penuh](https://source.android.com/docs/core/permissions/fsi-limits).
-
-## Pemeriksaan
-
-```powershell
-flutter analyze
-flutter test
-```
+Detail kebutuhan produk ada di [PRD](APTIMO-PRD.md), sedangkan rancangan tampilan berada di [Catatan UI](APTIMO-UI.md).

@@ -1,5 +1,7 @@
 import 'package:aptimo/features/jadwal/jadwal_page.dart';
+import 'package:aptimo/features/jadwal/jadwal_form.dart';
 import 'package:aptimo/main.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,6 +73,71 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('aptimoDemoToggle')));
     await tester.pumpAndSettle();
     expect(find.text('Paracetamol'), findsWidgets);
+  });
+
+  testWidgets('form tambah jadwal membuka dialog dan menambah obat', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const AptimoApp());
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Berapa kali sehari?'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('jumlahMinum')), '1');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jam pertama: Pilih jam'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CupertinoPicker), findsNWidgets(2));
+    expect(find.text('Jam terpilih: 08.00'), findsOneWidget);
+    await tester.tap(find.text('Pilih'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('namaObat')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.enterText(find.byKey(const ValueKey('namaObat')), 'Vitamin C');
+    await tester.tap(find.text('Tambahkan jadwal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jadwal Aktif'), findsOneWidget);
+    expect(find.text('1 obat'), findsOneWidget);
+    expect(find.text('Vitamin C'), findsWidgets);
+  });
+
+  test('interval tetap pada hari yang sama', () {
+    const pertama = TimeOfDay(hour: 8, minute: 0);
+    expect(hitungJamInterval(pertama, 3, 240), const [
+      TimeOfDay(hour: 8, minute: 0),
+      TimeOfDay(hour: 12, minute: 0),
+      TimeOfDay(hour: 16, minute: 0),
+    ]);
+    expect(
+      hitungJamInterval(const TimeOfDay(hour: 20, minute: 0), 3, 240),
+      isNull,
+    );
+    expect(
+      hitungJamInterval(const TimeOfDay(hour: 23, minute: 59), 1, 60),
+      const [TimeOfDay(hour: 23, minute: 59)],
+    );
+  });
+
+  test('jadwal baru mengabaikan jam yang telah lewat pada hari pembuatan', () {
+    final jadwal = JadwalObat(
+      nama: 'Vitamin C',
+      jam: hitungJamInterval(const TimeOfDay(hour: 8, minute: 0), 3, 240)!,
+      hari: const {1, 2, 3, 4, 5, 6, 7},
+      status: StatusJadwal.aktif,
+      tanggalMulai: DateTime(2026, 11, 26),
+    );
+    expect(
+      jadwal.berikutnya(DateTime(2026, 11, 26, 13)),
+      DateTime(2026, 11, 26, 16),
+    );
+    expect(
+      jadwal.berikutnya(DateTime(2026, 11, 26, 16, 1)),
+      DateTime(2026, 11, 27, 8),
+    );
   });
 
   test('jadwal nonaktif tidak menghasilkan pengingat mendatang', () {
