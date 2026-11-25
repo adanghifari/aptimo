@@ -1,17 +1,20 @@
-# aptimo
+# APTIMO
 
-A new Flutter project.
+APTIMO adalah aplikasi pengingat jadwal minum obat untuk Android yang dirancang berjalan secara lokal. Spesifikasi produk ada di [APTIMO-PRD.md](APTIMO-PRD.md).
 
-## Getting Started
+## Menjalankan pratinjau halaman Jadwal
 
-This project is a starting point for a Flutter application.
+```powershell
+flutter run --dart-define=APTIMO_DEMO=true
+```
 
-A few resources to get you started if this is your first Flutter project:
+Mode ini menampilkan obat contoh untuk meninjau kartu pengingat terdekat, daftar jadwal aktif/nonaktif/berakhir, dan keadaan kosong. Tombol **Lihat keadaan kosong** tersedia di bagian atas halaman. Tanpa `APTIMO_DEMO`, halaman dimulai tanpa jadwal contoh.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+**Tahap saat ini hanya pratinjau UI.** Jadwal contoh dan perubahan status hanya ada dalam memori. Form tambah jadwal, alarm Android, izin, penyimpanan lokal, dan riwayat konsumsi belum diimplementasikan. Aplikasi menampilkan pesan bahwa pengingat belum aktif agar tidak digunakan sebagai alarm obat pada tahap ini.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Pemeriksaan
+
+```powershell
+flutter analyze
+flutter test
+```
